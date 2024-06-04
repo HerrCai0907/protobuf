@@ -276,10 +276,10 @@ void Map::GenerateSerializeWithCachedSizesToArray(io::Printer* p) const {
            }},
       },
       R"cc(
-        if (!_internal_$name$().empty()) {
+        if (!this_._internal_$name$().empty()) {
           using MapType = $Map$;
           using WireHelper = $Funcs$;
-          const auto& field = _internal_$name$();
+          const auto& field = this_._internal_$name$();
 
           if (stream->IsSerializationDeterministic() && field.size() > 1) {
             for (const auto& entry : $pbi$::$Sorter$<MapType>(field)) {

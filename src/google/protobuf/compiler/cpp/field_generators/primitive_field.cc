@@ -248,13 +248,13 @@ void SingularPrimitive::GenerateSerializeWithCachedSizesToArray(
     p->Emit(R"cc(
       target = ::$proto_ns$::internal::WireFormatLite::
           Write$declared_type$ToArrayWithField<$number$>(
-              stream, this->_internal_$name$(), target);
+              stream, this_._internal_$name$(), target);
     )cc");
   } else {
     p->Emit(R"cc(
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::Write$DeclaredType$ToArray(
-          $number$, this->_internal_$name$(), target);
+          $number$, this_._internal_$name$(), target);
     )cc");
   }
 }
@@ -546,10 +546,10 @@ void RepeatedPrimitive::GenerateSerializeWithCachedSizesToArray(
     io::Printer* p) const {
   if (!field_->is_packed()) {
     p->Emit(R"cc(
-      for (int i = 0, n = this->_internal_$name$_size(); i < n; ++i) {
+      for (int i = 0, n = this_._internal_$name$_size(); i < n; ++i) {
         target = stream->EnsureSpace(target);
         target = ::_pbi::WireFormatLite::Write$DeclaredType$ToArray(
-            $number$, this->_internal_$name$().Get(i), target);
+            $number$, this_._internal_$name$().Get(i), target);
       }
     )cc");
     return;
@@ -557,8 +557,8 @@ void RepeatedPrimitive::GenerateSerializeWithCachedSizesToArray(
 
   if (FixedSize(field_->type()).has_value()) {
     p->Emit(R"cc(
-      if (this->_internal_$name$_size() > 0) {
-        target = stream->WriteFixedPacked($number$, _internal_$name$(), target);
+      if (this_._internal_$name$_size() > 0) {
+        target = stream->WriteFixedPacked($number$, this_._internal_$name$(), target);
       }
     )cc");
     return;
@@ -569,11 +569,11 @@ void RepeatedPrimitive::GenerateSerializeWithCachedSizesToArray(
           {"byte_size",
            [&] {
              if (HasCachedSize()) {
-               p->Emit(R"cc($_field_cached_byte_size_$.Get();)cc");
+               p->Emit(R"cc(this_.$_field_cached_byte_size_$.Get();)cc");
              } else {
                p->Emit(R"cc(
                  ::_pbi::WireFormatLite::$DeclaredType$Size(
-                     this->_internal_$name$());
+                     this_._internal_$name$());
                )cc");
              }
            }},
@@ -583,7 +583,7 @@ void RepeatedPrimitive::GenerateSerializeWithCachedSizesToArray(
           int byte_size = $byte_size$;
           if (byte_size > 0) {
             target = stream->Write$DeclaredType$Packed(
-                $number$, _internal_$name$(), byte_size, target);
+                $number$, this_._internal_$name$(), byte_size, target);
           }
         }
       )cc");

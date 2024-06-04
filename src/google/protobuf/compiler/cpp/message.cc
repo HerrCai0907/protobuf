@@ -209,7 +209,7 @@ void EmitNonDefaultCheck(io::Printer* p, const std::string& prefix,
       p->Emit("$prefix$_internal_$name$() != 0");
     }
   } else if (field->real_containing_oneof()) {
-    p->Emit("$has_field$");
+    p->Emit("$prefix$$has_field$");
   }
 }
 
@@ -1750,9 +1750,31 @@ void MessageGenerator::GenerateClassDefinition(io::Printer* p) {
             p->Emit(R"cc(
               ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
               ::size_t ByteSizeLong() const PROTOBUF_FINAL;
-              $uint8$* _InternalSerialize($uint8$* target,
-                                          ::$proto_ns$::io::EpsCopyOutputStream*
-                                              stream) const PROTOBUF_FINAL;
+            )cc");
+            // In custom vtable mode, the _InternalSerialize implemented is the
+            // static function. The non-static function is a small trampoline
+            // function. In normal mode, the _InternalSerialize implemented is
+            // the non-static member which is a virtual override.
+            // This reduces the number of functions and trampolines in both
+            // modes.
+            p->Emit(R"cc(
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+              private:
+              static $uint8$* _InternalSerialize(
+                  const MessageLite& msg, $uint8$* target,
+                  ::$proto_ns$::io::EpsCopyOutputStream* stream);
+
+              public:
+              $uint8$* _InternalSerialize(
+                  $uint8$* target,
+                  ::$proto_ns$::io::EpsCopyOutputStream* stream) const {
+                return _InternalSerialize(*this, target, stream);
+              }
+#else   // PROTOBUF_CUSTOM_VTABLE
+              $uint8$* _InternalSerialize(
+                  $uint8$* target,
+                  ::$proto_ns$::io::EpsCopyOutputStream* stream) const final;
+#endif  // PROTOBUF_CUSTOM_VTABLE
             )cc");
           }
         }},
@@ -3659,7 +3681,7 @@ void MessageGenerator::GenerateClassData(io::Printer* p) {
       p->Emit(R"cc(
         $superclass$::GetClearImpl<$classname$>(),
             $superclass$::GetByteSizeLongImpl<$classname$>(),
-            $superclass$::GetSerializeImpl<$classname$>(),
+            &$classname$::_InternalSerialize,
       )cc");
     } else {
       p->Emit(R"cc(
@@ -3733,9 +3755,11 @@ void MessageGenerator::GenerateClassData(io::Printer* p) {
                       $on_demand_register_arena_dtor$,
                       $is_initialized$,
                       &$classname$::MergeImpl,
+#if defined(PROTOBUF_CUSTOM_VTABLE)
                       $superclass$::GetDeleteImpl<$classname$>(),
                       $superclass$::GetNewImpl<$classname$>(),
                       $custom_vtable_methods$,
+#endif  // PROTOBUF_CUSTOM_VTABLE
                       PROTOBUF_FIELD_OFFSET($classname$, $cached_size$),
                       false,
                   },
@@ -3768,9 +3792,11 @@ void MessageGenerator::GenerateClassData(io::Printer* p) {
                       $on_demand_register_arena_dtor$,
                       $is_initialized$,
                       &$classname$::MergeImpl,
+#if defined(PROTOBUF_CUSTOM_VTABLE)
                       $superclass$::GetDeleteImpl<$classname$>(),
                       $superclass$::GetNewImpl<$classname$>(),
                       $custom_vtable_methods$,
+#endif  // PROTOBUF_CUSTOM_VTABLE
                       PROTOBUF_FIELD_OFFSET($classname$, $cached_size$),
                       true,
                   },
@@ -4111,7 +4137,7 @@ void MessageGenerator::GenerateSerializeOneofFields(
               }
             }}},
           R"cc(
-            switch ($name$_case()) {
+            switch (this_.$name$_case()) {
               $cases$;
               default:
                 break;
@@ -4146,7 +4172,8 @@ void MessageGenerator::GenerateSerializeOneField(io::Printer* p,
                if (cached_has_bits_index == has_bit_index / 32) {
                  p->Emit("cached_has_bits & $has_mask$");
                } else {
-                 p->Emit("($has_bits$[$has_array_index$] & $has_mask$) != 0");
+                 p->Emit(
+                     "(this_.$has_bits$[$has_array_index$] & $has_mask$) != 0");
                }
              }},
         },
@@ -4156,7 +4183,7 @@ void MessageGenerator::GenerateSerializeOneField(io::Printer* p,
           }
         )cc");
   } else if (field->is_optional()) {
-    bool have_enclosing_if = MayEmitIfNonDefaultCheck(p, "this->", field);
+    bool have_enclosing_if = MayEmitIfNonDefaultCheck(p, "this_.", field);
     if (have_enclosing_if) p->Indent();
     emit_body();
     if (have_enclosing_if) {
@@ -4177,7 +4204,7 @@ void MessageGenerator::GenerateSerializeOneExtensionRange(io::Printer* p,
   p->Emit({{"start", start}, {"end", end}},
           R"cc(
             // Extension range [$start$, $end$)
-            target = $extensions$._InternalSerialize(
+            target = this_.$extensions$._InternalSerialize(
                 internal_default_instance(), $start$, $end$, target, stream);
           )cc");
 }
@@ -4187,14 +4214,23 @@ void MessageGenerator::GenerateSerializeWithCachedSizesToArray(io::Printer* p) {
   if (descriptor_->options().message_set_wire_format()) {
     // Special-case MessageSet.
     p->Emit(R"cc(
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+      $uint8$* $classname$::_InternalSerialize(
+          const MessageLite& base, $uint8$* target,
+          ::$proto_ns$::io::EpsCopyOutputStream* stream) {
+        const $classname$& this_ = static_cast<const $classname$&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
       $uint8$* $classname$::_InternalSerialize(
           $uint8$* target,
           ::$proto_ns$::io::EpsCopyOutputStream* stream) const {
+        const $classname$& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
         $annotate_serialize$ target =
-            $extensions$.InternalSerializeMessageSetWithCachedSizesToArray(
-                internal_default_instance(), target, stream);
+            this_.$extensions$
+                .InternalSerializeMessageSetWithCachedSizesToArray(
+                    internal_default_instance(), target, stream);
         target = ::_pbi::InternalSerializeUnknownMessageSetItemsToArray(
-            $unknown_fields$, target, stream);
+            this_.$unknown_fields$, target, stream);
         return target;
       }
     )cc");
@@ -4225,9 +4261,17 @@ void MessageGenerator::GenerateSerializeWithCachedSizesToArray(io::Printer* p) {
            }},
       },
       R"cc(
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+        $uint8$* $classname$::_InternalSerialize(
+            const MessageLite& base, $uint8$* target,
+            ::$proto_ns$::io::EpsCopyOutputStream* stream) {
+          const $classname$& this_ = static_cast<const $classname$&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
         $uint8$* $classname$::_InternalSerialize(
             $uint8$* target,
             ::$proto_ns$::io::EpsCopyOutputStream* stream) const {
+          const $classname$& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
           $annotate_serialize$;
           // @@protoc_insertion_point(serialize_to_array_start:$full_name$)
           $ifdef$;
@@ -4271,7 +4315,7 @@ void MessageGenerator::GenerateSerializeWithCachedSizesBody(io::Printer* p) {
             int new_index = has_bit_index / 32;
             p_->Emit({{"index", new_index}},
                      R"cc(
-                       cached_has_bits = _impl_._has_bits_[$index$];
+                       cached_has_bits = this_._impl_._has_bits_[$index$];
                      )cc");
             cached_has_bit_index_ = new_index;
           }
@@ -4382,7 +4426,8 @@ void MessageGenerator::GenerateSerializeWithCachedSizesBody(io::Printer* p) {
            [&] {
              if (num_weak_fields_ == 0) return;
              p->Emit(R"cc(
-               ::_pbi::WeakFieldMap::FieldWriter field_writer($weak_field_map$);
+               ::_pbi::WeakFieldMap::FieldWriter field_writer(
+                   this_.$weak_field_map$);
              )cc");
            }},
           {"handle_lazy_fields",
@@ -4422,13 +4467,13 @@ void MessageGenerator::GenerateSerializeWithCachedSizesBody(io::Printer* p) {
                p->Emit(R"cc(
                  target =
                      ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-                         $unknown_fields$, target, stream);
+                         this_.$unknown_fields$, target, stream);
                )cc");
              } else {
                p->Emit(R"cc(
                  target = stream->WriteRaw(
-                     $unknown_fields$.data(),
-                     static_cast<int>($unknown_fields$.size()), target);
+                     this_.$unknown_fields$.data(),
+                     static_cast<int>(this_.$unknown_fields$.size()), target);
                )cc");
              }
            }},
@@ -4439,7 +4484,7 @@ void MessageGenerator::GenerateSerializeWithCachedSizesBody(io::Printer* p) {
         (void)cached_has_bits;
 
         $handle_lazy_fields$;
-        if (PROTOBUF_PREDICT_FALSE($have_unknown_fields$)) {
+        if (PROTOBUF_PREDICT_FALSE(this_.$have_unknown_fields$)) {
           $handle_unknown_fields$;
         }
       )cc");
@@ -4470,7 +4515,8 @@ void MessageGenerator::GenerateSerializeWithCachedSizesBodyShuffled(
            [&] {
              if (num_weak_fields_ == 0) return;
              p->Emit(R"cc(
-               ::_pbi::WeakFieldMap::FieldWriter field_writer($weak_field_map$);
+               ::_pbi::WeakFieldMap::FieldWriter field_writer(
+                   this_.$weak_field_map$);
              )cc");
            }},
           {"ordered_cases",
@@ -4511,13 +4557,13 @@ void MessageGenerator::GenerateSerializeWithCachedSizesBodyShuffled(
                p->Emit(R"cc(
                  target =
                      ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-                         $unknown_fields$, target, stream);
+                         this_.$unknown_fields$, target, stream);
                )cc");
              } else {
                p->Emit(R"cc(
                  target = stream->WriteRaw(
-                     $unknown_fields$.data(),
-                     static_cast<int>($unknown_fields$.size()), target);
+                     this_.$unknown_fields$.data(),
+                     static_cast<int>(this_.$unknown_fields$.size()), target);
                )cc");
              }
            }},
@@ -4533,7 +4579,7 @@ void MessageGenerator::GenerateSerializeWithCachedSizesBodyShuffled(
             }
           }
         }
-        if (PROTOBUF_PREDICT_FALSE($have_unknown_fields$)) {
+        if (PROTOBUF_PREDICT_FALSE(this_.$have_unknown_fields$)) {
           $handle_unknown_fields$;
         }
       )cc");

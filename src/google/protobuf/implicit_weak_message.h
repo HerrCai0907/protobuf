@@ -79,6 +79,13 @@ class PROTOBUF_EXPORT ImplicitWeakMessage final : public MessageLite {
                             target);
   }
 
+  static uint8_t* _InternalSerializeImpl(const MessageLite& msg,
+                                         uint8_t* target,
+                                         io::EpsCopyOutputStream* stream) {
+    return static_cast<const ImplicitWeakMessage&>(msg)._InternalSerialize(
+        target, stream);
+  }
+
   typedef void InternalArenaConstructable_;
 
   static const char* ParseImpl(ImplicitWeakMessage* msg, const char* ptr,

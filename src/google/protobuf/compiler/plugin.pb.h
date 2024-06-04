@@ -211,9 +211,23 @@ class PROTOC_EXPORT Version final : public ::google::protobuf::Message
   }
   ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
   ::size_t ByteSizeLong() const PROTOBUF_FINAL;
-  ::uint8_t* _InternalSerialize(::uint8_t* target,
-                              ::google::protobuf::io::EpsCopyOutputStream*
-                                  stream) const PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+                private:
+                static ::uint8_t* _InternalSerialize(
+                    const MessageLite& msg, ::uint8_t* target,
+                    ::google::protobuf::io::EpsCopyOutputStream* stream);
+
+                public:
+                ::uint8_t* _InternalSerialize(
+                    ::uint8_t* target,
+                    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+                  return _InternalSerialize(*this, target, stream);
+                }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+                ::uint8_t* _InternalSerialize(
+                    ::uint8_t* target,
+                    ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
   int GetCachedSize() const { return _impl_._cached_size_.Get(); }
 
   private:
@@ -430,9 +444,23 @@ class PROTOC_EXPORT CodeGeneratorResponse_File final : public ::google::protobuf
   }
   ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
   ::size_t ByteSizeLong() const PROTOBUF_FINAL;
-  ::uint8_t* _InternalSerialize(::uint8_t* target,
-                              ::google::protobuf::io::EpsCopyOutputStream*
-                                  stream) const PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+                private:
+                static ::uint8_t* _InternalSerialize(
+                    const MessageLite& msg, ::uint8_t* target,
+                    ::google::protobuf::io::EpsCopyOutputStream* stream);
+
+                public:
+                ::uint8_t* _InternalSerialize(
+                    ::uint8_t* target,
+                    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+                  return _InternalSerialize(*this, target, stream);
+                }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+                ::uint8_t* _InternalSerialize(
+                    ::uint8_t* target,
+                    ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
   int GetCachedSize() const { return _impl_._cached_size_.Get(); }
 
   private:
@@ -665,9 +693,23 @@ class PROTOC_EXPORT CodeGeneratorResponse final : public ::google::protobuf::Mes
   }
   ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
   ::size_t ByteSizeLong() const PROTOBUF_FINAL;
-  ::uint8_t* _InternalSerialize(::uint8_t* target,
-                              ::google::protobuf::io::EpsCopyOutputStream*
-                                  stream) const PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+                private:
+                static ::uint8_t* _InternalSerialize(
+                    const MessageLite& msg, ::uint8_t* target,
+                    ::google::protobuf::io::EpsCopyOutputStream* stream);
+
+                public:
+                ::uint8_t* _InternalSerialize(
+                    ::uint8_t* target,
+                    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+                  return _InternalSerialize(*this, target, stream);
+                }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+                ::uint8_t* _InternalSerialize(
+                    ::uint8_t* target,
+                    ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
   int GetCachedSize() const { return _impl_._cached_size_.Get(); }
 
   private:
@@ -929,9 +971,23 @@ class PROTOC_EXPORT CodeGeneratorRequest final : public ::google::protobuf::Mess
   public:
   ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
   ::size_t ByteSizeLong() const PROTOBUF_FINAL;
-  ::uint8_t* _InternalSerialize(::uint8_t* target,
-                              ::google::protobuf::io::EpsCopyOutputStream*
-                                  stream) const PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+                private:
+                static ::uint8_t* _InternalSerialize(
+                    const MessageLite& msg, ::uint8_t* target,
+                    ::google::protobuf::io::EpsCopyOutputStream* stream);
+
+                public:
+                ::uint8_t* _InternalSerialize(
+                    ::uint8_t* target,
+                    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+                  return _InternalSerialize(*this, target, stream);
+                }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+                ::uint8_t* _InternalSerialize(
+                    ::uint8_t* target,
+                    ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
   int GetCachedSize() const { return _impl_._cached_size_.Get(); }
 
   private:
